@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react'
 
 function App() {
   const [lockers, setLockers] = useState(Array(100).fill(false)) // false = closed, true = open
@@ -11,6 +12,26 @@ function App() {
   const [isComplete, setIsComplete] = useState(false)
   const [currentAction, setCurrentAction] = useState('')
   const [studentFinished, setStudentFinished] = useState(false) // Track if current student finished
+
+  // Hook to get responsive grid sizing
+  const [gridSize, setGridSize] = useState({ lockerSize: 50, gap: 8, offset: 30 })
+  
+  useEffect(() => {
+    const updateGridSize = () => {
+      const width = window.innerWidth
+      if (width <= 480) {
+        setGridSize({ lockerSize: 24, gap: 3, offset: 12 })
+      } else if (width <= 768) {
+        setGridSize({ lockerSize: 28, gap: 4, offset: 14 })
+      } else {
+        setGridSize({ lockerSize: 50, gap: 8, offset: 30 })
+      }
+    }
+    
+    updateGridSize()
+    window.addEventListener('resize', updateGridSize)
+    return () => window.removeEventListener('resize', updateGridSize)
+  }, [])
 
   // Reset simulation
   const resetSimulation = useCallback(() => {
@@ -70,7 +91,7 @@ function App() {
           // Stop after each student unless auto-advance is enabled
           if (!autoAdvance) {
             setIsRunning(false)
-            setCurrentAction(`Student ${studentNumber} finished. Click Start to continue with Student ${studentNumber + 1}.`)
+            setCurrentAction(`Student ${studentNumber} finished. Click to continue with Student ${studentNumber + 1}.`)
           } else {
             setCurrentStudent(prev => prev + 1)
           }
@@ -82,10 +103,14 @@ function App() {
         
         // Determine if locker is being opened or closed
         const isCurrentlyOpen = lockers[lockerIndex]
-        const action = isCurrentlyOpen ? '🔻' : '🔺'
+        const action = isCurrentlyOpen ? <ChevronDown size={16} color="#f44336" /> : <ChevronUp size={16} color="#4CAF50" />
         const actionText = isCurrentlyOpen ? 'closing' : 'opening'
         
-        setCurrentAction(`Student ${studentNumber} is ${actionText} locker ${lockerIndex + 1} ${action}`)
+        setCurrentAction(
+          <span>
+            Student {studentNumber} is {actionText} locker {lockerIndex + 1} {action}
+          </span>
+        )
         toggleLocker(lockerIndex)
         stepIndex++
       }, milliseconds / 4)
@@ -132,11 +157,23 @@ function App() {
           disabled={isComplete}
           className={isRunning ? 'pause' : 'play'}
         >
-          {isRunning ? '⏸️ Pause' : currentStudent === 0 ? '▶️ Start' : '▶️ Next Student'}
+          {isRunning ? (
+            <>
+              <Pause size={16} /> Pause
+            </>
+          ) : currentStudent === 0 ? (
+            <>
+              <Play size={16} /> Start
+            </>
+          ) : (
+            <>
+              <Play size={16} /> Next Student
+            </>
+          )}
         </button>
         
         <button onClick={resetSimulation} className="reset">
-          🔄 Reset
+          <RotateCcw size={16} /> Reset
         </button>
 
         <div className="auto-advance">
@@ -210,8 +247,8 @@ function App() {
               className="student"
               initial={{ x: -50 }}
               animate={{
-                x: `${(studentPosition % 10) * 60 + 30}px`,
-                y: `${Math.floor(studentPosition / 10) * 60 + 30}px`
+                x: `${(studentPosition % 10) * (gridSize.lockerSize + gridSize.gap) + gridSize.offset}px`,
+                y: `${Math.floor(studentPosition / 10) * (gridSize.lockerSize + gridSize.gap) + gridSize.offset}px`
               }}
               exit={{ x: 650 }}
               transition={{ duration: 0.3 }}
@@ -223,20 +260,25 @@ function App() {
       </div>
 
       {isComplete && (
-        <motion.div 
-          className="completion-message"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h2>🎉 Puzzle Complete!</h2>
-          <p>After all 100 students have finished, <strong>{openCount}</strong> lockers remain open.</p>
-          <p>These are the perfect squares: {
-            lockers.map((isOpen, index) => isOpen ? index + 1 : null)
-              .filter(Boolean)
-              .join(', ')
-          }</p>
-        </motion.div>
+        <div className="completion-message-container">
+          <motion.div 
+            className="completion-message"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2>🎉 Puzzle Complete!</h2>
+            <p>After all 100 students have finished, <strong>{openCount}</strong> lockers remain open.</p>
+            <p>Open lockers: {
+              lockers.map((isOpen, index) => isOpen ? index + 1 : null)
+                .filter(Boolean)
+                .join(', ')
+            }</p>
+            <button onClick={resetSimulation} className="reset-button">
+              <RotateCcw size={16} /> Play Again
+            </button>
+          </motion.div>
+        </div>
       )}
     </div>
   )
