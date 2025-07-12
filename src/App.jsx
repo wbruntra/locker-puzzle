@@ -1,30 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Plus, Minus } from 'lucide-react'
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react'
+import { usePuzzle } from './usePuzzle'
 
 function App() {
-  const [lockers, setLockers] = useState(Array(100).fill(false)) // false = closed, true = open
-  const [currentStudent, setCurrentStudent] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
-  const [autoAdvance, setAutoAdvance] = useState(false) // New state for auto-advance mode
-  const [speed, setSpeed] = useState(5) // speed scale 1-10
-  const [studentPosition, setStudentPosition] = useState(0)
-  const [isComplete, setIsComplete] = useState(false)
-  const [currentAction, setCurrentAction] = useState('')
-  const [studentFinished, setStudentFinished] = useState(false) // Track if current student finished
-  const [stepTimerRef, setStepTimerRef] = useState(null) // Track the step interval for pausing
-  const [currentStepIndex, setCurrentStepIndex] = useState(0) // Track current step within a student's turn
-  const isRunningRef = useRef(isRunning) // Ref to track current running state for intervals
-  const lockersRef = useRef(lockers) // Ref to track current lockers state for intervals
-
-  // Keep the refs in sync with the state
-  useEffect(() => {
-    isRunningRef.current = isRunning
-  }, [isRunning])
-
-  useEffect(() => {
-    lockersRef.current = lockers
-  }, [lockers])
+  const { state, dispatch } = usePuzzle()
+  const { lockers, currentStep, running, autoAdvance, speed, isComplete } = state
 
   // Hook to get responsive grid sizing
   const [gridSize, setGridSize] = useState({ lockerSize: 50, gap: 8, offset: 30 })
@@ -46,130 +27,28 @@ function App() {
     return () => window.removeEventListener('resize', updateGridSize)
   }, [])
 
-  // Reset simulation
-  const resetSimulation = useCallback(() => {
-    if (stepTimerRef) {
-      clearInterval(stepTimerRef)
-      setStepTimerRef(null)
-    }
-    setLockers(Array(100).fill(false))
-    setCurrentStudent(0)
-    setStudentPosition(0)
-    setCurrentStepIndex(0)
-    setIsRunning(false)
-    setAutoAdvance(false)
-    setIsComplete(false)
-    setCurrentAction('')
-    setStudentFinished(false)
-  }, [stepTimerRef])
-
-  // Toggle a specific locker
-  const toggleLocker = useCallback((index) => {
-    setLockers(prev => {
-      const newLockers = [...prev]
-      newLockers[index] = !newLockers[index]
-      return newLockers
-    })
-  }, [])
-
-  // Clear any running step timer when pausing or completing
-  useEffect(() => {
-    if ((!isRunning || isComplete) && stepTimerRef) {
-      clearInterval(stepTimerRef)
-      setStepTimerRef(null)
-    }
-  }, [isRunning, isComplete, stepTimerRef])
-
-  // Animation logic
-  useEffect(() => {
-    // Do nothing if we are paused/finished or if an interval is already running
-    if (!isRunning || isComplete || stepTimerRef) return
-
-    // Convert speed scale (1-10) to milliseconds (2000ms to 200ms)
-    const milliseconds = 2200 - (speed * 200)
-
-    const timer = setTimeout(() => {
-      if (currentStudent >= 100) {
-        setIsComplete(true)
-        setIsRunning(false)
-        setCurrentAction('Simulation complete!')
-        return
-      }
-
-      const studentNumber = currentStudent + 1
-      const lockersToToggle = []
-      
-      // Calculate which lockers this student will toggle
-      for (let i = studentNumber - 1; i < 100; i += studentNumber) {
-        lockersToToggle.push(i)
-      }
-
-      // Reset student finished state when starting a new student (but only if starting from step 0)
-      if (currentStepIndex === 0) {
-        setStudentFinished(false)
-      }
-
-      // Animate through each locker this student toggles, starting from currentStepIndex
-      let stepIndex = currentStepIndex
-      const stepTimer = setInterval(() => {
-        // Check if we should stop (user paused)
-        if (!isRunningRef.current) {
-          clearInterval(stepTimer)
-          setStepTimerRef(null)
-          setCurrentStepIndex(stepIndex) // Save current position for resuming
-          return
-        }
-
-        if (stepIndex >= lockersToToggle.length) {
-          clearInterval(stepTimer)
-          setStepTimerRef(null)
-          setStudentPosition(0)
-          setStudentFinished(true)
-          setCurrentStepIndex(0) // Reset step index for next student
-          
-          // Stop after each student unless auto-advance is enabled
-          if (!autoAdvance) {
-            setIsRunning(false)
-            setCurrentAction(`Student ${studentNumber} finished. Click to continue with Student ${studentNumber + 1}.`)
-          } else {
-            setCurrentStudent(prev => prev + 1)
-          }
-          return
-        }
-
-        const lockerIndex = lockersToToggle[stepIndex]
-        setStudentPosition(lockerIndex)
-        
-        // Determine if locker is being opened or closed using the ref
-        const isCurrentlyOpen = lockersRef.current[lockerIndex]
-        const action = isCurrentlyOpen ? <ChevronDown size={16} color="#f44336" /> : <ChevronUp size={16} color="#4CAF50" />
-        const actionText = isCurrentlyOpen ? 'closing' : 'opening'
-        
-        setCurrentAction(
-          <span>
-            Student {studentNumber} is {actionText} locker {lockerIndex + 1} {action}
-          </span>
-        )
-        toggleLocker(lockerIndex)
-        stepIndex++
-      }, milliseconds / 4)
-
-      setStepTimerRef(stepTimer)
-    }, milliseconds)
-
-    return () => clearTimeout(timer)
-  }, [currentStudent, isRunning, speed, toggleLocker, isComplete, autoAdvance, currentStepIndex])
-
-  // Function to advance to next student manually
-  const nextStudent = useCallback(() => {
-    if (currentStudent < 100) {
-      setCurrentAction('')
-      setIsRunning(true)
-      // Don't increment here - let the useEffect handle the student logic
-    }
-  }, [currentStudent])
-
   const openCount = lockers.filter(Boolean).length
+  const student = currentStep?.student ?? 1
+  const studentPosition = currentStep?.locker ?? -1
+  const isDone = currentStep?.done ?? false
+
+  // Generate current action message
+  const getCurrentAction = () => {
+    if (isComplete) return 'Simulation complete!'
+    if (!currentStep) return 'Click Start to begin'
+    if (isDone) return `Student ${student} finished. ${autoAdvance ? 'Auto-advancing...' : 'Click to continue with next student.'}`
+    if (studentPosition === -1) return 'Click Start to begin'
+    
+    const lockerWasOpen = studentPosition >= 0 ? !lockers[studentPosition] : false
+    const action = lockerWasOpen ? <ChevronDown size={16} color="#f44336" /> : <ChevronUp size={16} color="#4CAF50" />
+    const actionText = lockerWasOpen ? 'closing' : 'opening'
+    
+    return (
+      <span>
+        Student {student} is {actionText} locker {studentPosition + 1} {action}
+      </span>
+    )
+  }
 
   return (
     <div className="app">
@@ -180,39 +59,26 @@ function App() {
 
       <div className="controls">
         <button 
-          onClick={() => {
-            if (!isRunning && currentStudent < 100) {
-              if (studentFinished) {
-                // If current student finished, advance to next student
-                setCurrentStudent(prev => prev + 1)
-                setStudentFinished(false)
-                setCurrentStepIndex(0) // Reset step index for new student
-              }
-              setIsRunning(true)
-            } else {
-              // If running, pause
-              setIsRunning(!isRunning)
-            }
-          }} 
+          onClick={() => dispatch({ type: running ? 'PAUSE' : 'PLAY' })}
           disabled={isComplete}
-          className={isRunning ? 'pause' : 'play'}
+          className={running ? 'pause' : 'play'}
         >
-          {isRunning ? (
+          {running ? (
             <>
               <Pause size={16} /> Pause
             </>
-          ) : currentStudent === 0 ? (
+          ) : student === 1 && studentPosition === -1 ? (
             <>
               <Play size={16} /> Start
             </>
           ) : (
             <>
-              <Play size={16} /> Next Student
+              <Play size={16} /> Continue
             </>
           )}
         </button>
         
-        <button onClick={resetSimulation} className="reset">
+        <button onClick={() => dispatch({ type: 'RESET' })} className="reset">
           <RotateCcw size={16} /> Reset
         </button>
 
@@ -221,7 +87,7 @@ function App() {
             <input
               type="checkbox"
               checked={autoAdvance}
-              onChange={(e) => setAutoAdvance(e.target.checked)}
+              onChange={() => dispatch({ type: 'TOGGLE_AUTO' })}
             />
             Auto-advance students
           </label>
@@ -230,7 +96,7 @@ function App() {
         <div className="speed-control">
           <label>Speed: </label>
           <button 
-            onClick={() => setSpeed(Math.max(1, speed - 1))}
+            onClick={() => dispatch({ type: 'SET_SPEED', speed: Math.max(1, speed - 1) })}
             className="speed-button"
             disabled={speed <= 1}
           >
@@ -238,7 +104,7 @@ function App() {
           </button>
           <span className="speed-display">{speed.toString().padStart(2, ' ')}</span>
           <button 
-            onClick={() => setSpeed(Math.min(10, speed + 1))}
+            onClick={() => dispatch({ type: 'SET_SPEED', speed: Math.min(10, speed + 1) })}
             className="speed-button"
             disabled={speed >= 10}
           >
@@ -249,18 +115,18 @@ function App() {
 
       <div className="stats">
         <div className="stat">
-          <strong>Current Student:</strong> {currentStudent + 1}/100
+          <strong>Current Student:</strong> {student}/100
         </div>
         <div className="stat">
           <strong>Open Lockers:</strong> {openCount}
         </div>
         <div className="stat">
-          <strong>Progress:</strong> {Math.round((currentStudent / 100) * 100)}%
+          <strong>Progress:</strong> {Math.round(((student - 1) / 100) * 100)}%
         </div>
       </div>
 
       <div className="action-display">
-        {currentAction}
+        {getCurrentAction()}
       </div>
 
       <div className="hallway">
@@ -289,7 +155,7 @@ function App() {
         </div>
 
         <AnimatePresence>
-          {!isComplete && (
+          {!isComplete && studentPosition >= 0 && (
             <motion.div
               className="student"
               initial={{ x: -50 }}
@@ -321,7 +187,7 @@ function App() {
                 .filter(Boolean)
                 .join(', ')
             }</p>
-            <button onClick={resetSimulation} className="reset-button">
+            <button onClick={() => dispatch({ type: 'RESET' })} className="reset-button">
               <RotateCcw size={16} /> Play Again
             </button>
           </motion.div>
