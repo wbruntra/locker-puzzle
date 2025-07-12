@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>100 Lockers Puzzle</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .puzzle-box {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        max-width: 600px;
+        width: 100%;
+        text-align: left;
+        line-height: 1.6;
+        font-size: 18px;
+        color: #333;
+      }
+
+      .puzzle-box strong {
+        font-size: 28px;
+        color: #2c3e50;
+        display: block;
+        margin-bottom: 25px;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 15px;
+        text-align: center;
+      }
+
+      .puzzle-box ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 20px 0;
+      }
+
+      .puzzle-box li {
+        margin-bottom: 15px;
+        padding-left: 20px;
+        position: relative;
+      }
+
+      .puzzle-box li:before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        color: #3498db;
+        font-weight: bold;
+        font-size: 16px;
+      }
+
+      .puzzle-box .intro {
+        margin-bottom: 20px;
+        font-style: italic;
+      }
+
+      .puzzle-box .question {
+        margin-top: 25px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 18px;
+        color: #2c3e50;
+      }
+
+      .puzzle-box br {
+        line-height: 2;
+      }
+
+      /* Mobile optimizations */
+      @media (max-width: 768px) {
+        body {
+          padding: 15px;
+        }
+
+        .puzzle-box {
+          padding: 25px 20px;
+          font-size: 16px;
+        }
+
+        .puzzle-box strong {
+          font-size: 24px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 10px;
+        }
+
+        .puzzle-box {
+          padding: 20px 15px;
+          font-size: 15px;
+        }
+
+        .puzzle-box strong {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="puzzle-box">
+      <strong>The 100 Lockers Puzzle</strong>
+      
+      <div class="intro">
+        Picture a school hallway with 100 closed lockers numbered 1 to 100. Now imagine 100 students lined up for a peculiar ritual...
+      </div>
+
+      <ul>
+        <li>The first student walks down the hall and <em>opens every single locker</em></li>
+        
+        <li>The second student follows, <em>closing lockers 2, 4, 6</em>, and so on</li>
+        
+        <li>The third student goes down the hall and for every third locker, if it is closed, he opens it, if open, he closes it.</li>
+        
+        <li>The pattern continues: each student <em>n</em> toggles every <em>n</em>th locker (starting with their own number)</li>  
+      </ul>
+
+      <div class="question">After all students have taken their turn, how many lockers remain open?</div>
+    </div>
+  </body>
+</html>
