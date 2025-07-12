@@ -95,8 +95,39 @@ body {
   border-radius: 20px;
 }
 
-.speed-control input {
-  width: 100px;
+.speed-button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: #e0e0e0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #333;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.speed-button:hover:not(:disabled) {
+  background: #d0d0d0;
+  transform: scale(1.05);
+}
+
+.speed-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.speed-display {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 16px;
+  min-width: 24px;
+  text-align: center;
+  color: #333;
 }
 
 .stats {
